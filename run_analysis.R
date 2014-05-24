@@ -39,9 +39,7 @@ TestData<-cbind(Y_test_labeled,Subject_test,X_test)
 
 #Clean tables used to create TestData
 rm(Subject_test)
-rm(X_test)
-rm(Y_test)
-rm(Y_test_labeled)
+rm(X_test,Y_test,Y_test_labeled)
 
 #Repeat steps above to create a TrainingData data frame 
 X_train <- read.table("./UCI HAR Dataset/train/X_train.txt", quote="\"")
@@ -55,9 +53,7 @@ TrainData<-cbind(Y_train_labeled,Subject_train,X_train)
 
 #Clean tables used to create TrainData
 rm(Subject_train)
-rm(X_train)
-rm(Y_train)
-rm(Y_train_labeled)
+rm(X_train,Y_train,Y_train_labeled)
 
 #Merges TestData and TrainData
 TotalData<-rbind(TrainData,TestData)
@@ -78,28 +74,77 @@ StdNames<-grep(x=TotalNames,pattern="std",value=TRUE)
 
 #Merge MeanNames & StdNames and order the results
 SelectedNames<-c(MeanNames,StdNames)
-SelectedNames<-sort(SelectedNames)
+
+#Select names starting by t
+FinalNames<-c(grep(x=SelectedNames,pattern="tB",value=TRUE)
+              ,grep(x=SelectedNames,pattern="tG",value=TRUE))
+
+#exclude names with jerk and mag
+FinalNames1<-grep(x=FinalNames,pattern="Jerk",value=TRUE,invert=TRUE)
+FinalNames1<-grep(x=FinalNames1,pattern="Mag",value=TRUE,invert=TRUE)
+
+#takes names with jerk (excluding jerkmag)
+FinalNames2<-grep(x=FinalNames,pattern="Jerk",value=TRUE)
+FinalNames2<-grep(x=FinalNames2,pattern="Mag",value=TRUE,invert=TRUE)
+
+#takes names with mag
+FinalNames3<-grep(x=FinalNames,pattern="Mag",value=TRUE)
+
+#Select names starting by f
+FinalNames<-c(grep(x=SelectedNames,pattern="fB",value=TRUE))
+
+#exclude names with jerk and mag
+FinalNames4<-grep(x=FinalNames,pattern="Jerk",value=TRUE,invert=TRUE)
+FinalNames4<-grep(x=FinalNames4,pattern="Mag",value=TRUE,invert=TRUE)
+
+#takes names with jerk (excluding jerkmag)
+FinalNames5<-grep(x=FinalNames,pattern="Jerk",value=TRUE)
+FinalNames5<-grep(x=FinalNames5,pattern="Mag",value=TRUE,invert=TRUE)
+
+#takes names with mag
+FinalNames6<-grep(x=FinalNames,pattern="Mag",value=TRUE)
+
+#mergers all names
+FinalNames<-c(FinalNames1,FinalNames2,FinalNames3
+              ,FinalNames4,FinalNames5,FinalNames6)
 
 #Clean vectors used to create SelectedNames
-rm(MeanNames)
-rm(StdNames)
-rm(TotalNames)
+rm(MeanNames,StdNames)
+rm(TotalNames,SelectedNames)
+rm(FinalNames1,FinalNames2,FinalNames3
+   ,FinalNames4,FinalNames5,FinalNames6)
 
 #Subset from TotaData Columns with names in SelectedNames
-SelectedData<-TotalData[,SelectedNames]
+SelectedData<-TotalData[,FinalNames]
 
 #Add Columns with Subject and Activity Label
 ExpSelectedData<-cbind("Activity"=TotalData$ActLabel
                        ,"Subject"=TotalData$Subject,SelectedData)
 
 #Calculates means of the columns in the dataframe
-FinalData<-aggregate(ExpSelectedData[,SelectedNames]
+FinalData<-aggregate(ExpSelectedData[,FinalNames]
                         ,by=list(Activity=ExpSelectedData$Activity
                         ,Subject=ExpSelectedData$Subject),FUN="mean")
 #Clean dataframes used to produce FinalData
-rm(SelectedNames)
-rm(SelectedData)
-rm(ExpSelectedData)
+rm(FinalNames,SelectedData,ExpSelectedData)
+
+#We modify column titles in order to mak them more user friendly
+
+#Cleans "()"
+FinalNames<-gsub(x=names(FinalData),pattern="[()]",replacement="")
+#Replace "-" by "."
+FinalNames<-gsub(x=FinalNames,pattern="[-]",replacement=".")
+
+#Replace uppercase letters by lowercase
+FinalNames<-tolower(FinalNames)
+
+#Replace first t by raw. and f by fourier.
+FinalNames<-gsub(x=FinalNames,pattern="tbody",replacement="raw.body")
+FinalNames<-gsub(x=FinalNames,pattern="tgravity",replacement="raw.gravity")
+FinalNames<-gsub(x=FinalNames,pattern="fbody",replacement="fourier.body")
+
+#Includes changed titles in Final Data
+names(FinalData)<-FinalNames
 
 #Saves the FinalData in csv & txt (space delimited) called TidyData
 write.csv(x=FinalData,file="TidyData.csv",row.names=FALSE)
